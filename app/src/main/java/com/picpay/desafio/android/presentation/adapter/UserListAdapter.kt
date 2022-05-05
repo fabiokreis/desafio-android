@@ -11,17 +11,7 @@ import com.picpay.desafio.android.domain.models.User
 
 class UserListAdapter : RecyclerView.Adapter<UserListItemViewHolder>() {
 
-    var users = emptyList<User>()
-        set(value) {
-            val result = DiffUtil.calculateDiff(
-                UserListDiffCallback(
-                    field,
-                    value
-                )
-            )
-            result.dispatchUpdatesTo(this)
-            field = value
-        }
+    private var oldUsersList = emptyList<User>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserListItemViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -31,8 +21,15 @@ class UserListAdapter : RecyclerView.Adapter<UserListItemViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: UserListItemViewHolder, position: Int) {
-        holder.bind(users[position])
+        holder.bind(oldUsersList[position])
     }
 
-    override fun getItemCount(): Int = users.size
+    override fun getItemCount(): Int = oldUsersList.size
+
+    fun setData(newUsersList: List<User>){
+        val diffUtil = UserListDiffCallback(oldUsersList, newUsersList)
+        val diffResults = DiffUtil.calculateDiff(diffUtil)
+        oldUsersList = newUsersList
+        diffResults.dispatchUpdatesTo(this)
+    }
 }
