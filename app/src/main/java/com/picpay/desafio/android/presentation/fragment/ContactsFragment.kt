@@ -23,25 +23,34 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts) {
 
         setupRecyclerView()
         setupObservers()
+        setupRefreshListener()
     }
 
     private fun setupObservers() {
-        viewModel.users.observe(viewLifecycleOwner, Observer { response ->
-            when (response) {
-                is ContactsState.Success -> {
-                    hideProgressBar()
-                    response.data?.let { usersResponse ->
-                        userAdapter.setData(usersResponse)
+        with(viewModel) {
+            users.observe(viewLifecycleOwner, Observer { response ->
+                when (response) {
+                    is ContactsState.Success -> {
+                        hideProgressBar()
+                        response.data?.let { usersResponse ->
+                            userAdapter.setData(usersResponse)
+                            saveContacts(usersResponse)
+                        }
+                    }
+                    is ContactsState.Error -> {
+                        hideProgressBar()
+                    }
+                    is ContactsState.Loading -> {
+                        showProgressBar()
                     }
                 }
-                is ContactsState.Error -> {
-                    hideProgressBar()
-                }
-                is ContactsState.Loading -> {
-                    showProgressBar()
-                }
-            }
-        })
+            })
+
+            getSavedContacts().observe(viewLifecycleOwner, Observer { savedContacts ->
+                if (savedContacts == null || savedContacts.isEmpty()) getUsers()
+                else userAdapter.setData(savedContacts)
+            })
+        }
     }
 
     private fun setupRecyclerView() {
@@ -52,8 +61,17 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts) {
         }
     }
 
+    private fun setupRefreshListener() {
+        swipeRefreshLayout.setOnRefreshListener {
+            recyclerView.visibility = View.INVISIBLE
+            viewModel.getUsers()
+            swipeRefreshLayout.isRefreshing = false
+        }
+    }
+
     private fun hideProgressBar() {
         user_list_progress_bar.visibility = View.INVISIBLE
+        recyclerView.visibility = View.VISIBLE
     }
 
     private fun showProgressBar() {
