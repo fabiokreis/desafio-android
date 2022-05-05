@@ -7,7 +7,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class RetrofitInstance {
-    companion object{
+    companion object {
         private val retrofit by lazy {
             val client = OkHttpClient.Builder().build()
             Retrofit.Builder()
@@ -17,7 +17,7 @@ class RetrofitInstance {
                 .build()
         }
 
-        val api by lazy {
+        val api: PicPayService by lazy {
             retrofit.create(PicPayService::class.java)
         }
     }

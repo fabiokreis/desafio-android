@@ -1,40 +1,35 @@
 package com.picpay.desafio.android.presentation.viewModel
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.picpay.desafio.android.data.ContactsRepository
 import com.picpay.desafio.android.domain.ContactsState
 import com.picpay.desafio.android.domain.models.User
+import com.picpay.desafio.android.domain.usecase.ContactsUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.Response
+import kotlinx.coroutines.withContext
 
-class ContactsViewModel(private val contactRepository: ContactsRepository) : ViewModel() {
+class ContactsViewModel(
+    private val contactsUserCase: ContactsUseCase
+) : ViewModel() {
 
-    val users: MutableLiveData<ContactsState<List<User>>> = MutableLiveData()
+    private val _users: MutableLiveData<ContactsState<List<User>>> = MutableLiveData()
+    val users: LiveData<ContactsState<List<User>>> = _users
 
     init {
-        getSavedContacts()
+        getUsers()
     }
 
-    fun getUsers() = viewModelScope.launch {
-        users.postValue(ContactsState.Loading())
-        val response = contactRepository.getUsers()
-        users.postValue(handleUsersResponse(response))
-    }
-
-    private fun handleUsersResponse(response: Response<List<User>>): ContactsState<List<User>> {
-        if (response.isSuccessful) {
-            response.body()?.let { resultResponse ->
-                return ContactsState.Success(resultResponse)
+    private fun getUsers() {
+        _users.postValue(ContactsState.Loading())
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                _users.postValue(contactsUserCase.getContacts())
             }
         }
-        return ContactsState.Error(response.message())
     }
 
-    fun saveContacts(user: List<User>) = viewModelScope.launch {
-        contactRepository.upsert(user)
-    }
-
-    fun getSavedContacts() = contactRepository.getSavedContacts()
+    fun reloadContacts() = getUsers()
 }

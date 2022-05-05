@@ -4,4 +4,10 @@
     <string name="error">Ocorreu um erro. Tente novamente.</string>
     <string name="not_found">Não Encontrado</string>
 
+    <!-- Internet error dialog -->
+    <string name="no_internet_connection">Sem conexão com a internet</string>
+    <string name="network_failure">Erro de conexão com a rede</string>
+    <string name="data_failure">Erro ao carregar dados</string>
+    <string name="ok_button">OK</string>
+
 </resources>

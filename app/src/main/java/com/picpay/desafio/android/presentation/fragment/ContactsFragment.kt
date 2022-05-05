@@ -1,25 +1,27 @@
 package com.picpay.desafio.android.presentation.fragment
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.picpay.desafio.android.R
 import com.picpay.desafio.android.domain.ContactsState
-import com.picpay.desafio.android.presentation.ContactsActivity
 import com.picpay.desafio.android.presentation.adapter.UserListAdapter
 import com.picpay.desafio.android.presentation.viewModel.ContactsViewModel
 import kotlinx.android.synthetic.main.fragment_contacts.*
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class ContactsFragment : Fragment(R.layout.fragment_contacts) {
-    lateinit var viewModel: ContactsViewModel
+    private val viewModel: ContactsViewModel by viewModel()
 
-    lateinit var userAdapter: UserListAdapter
+    private val userAdapter: UserListAdapter by inject()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel = (activity as ContactsActivity).viewModel
 
         setupRecyclerView()
         setupObservers()
@@ -31,30 +33,32 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts) {
             users.observe(viewLifecycleOwner, Observer { response ->
                 when (response) {
                     is ContactsState.Success -> {
-                        hideProgressBar()
+                        showProgressBar(false)
+                        showRecyclerView(true)
                         response.data?.let { usersResponse ->
                             userAdapter.setData(usersResponse)
-                            saveContacts(usersResponse)
                         }
                     }
                     is ContactsState.Error -> {
-                        hideProgressBar()
+                        showProgressBar(false)
+                        showRecyclerView(true)
+
+                        AlertDialog.Builder(context)
+                            .setCancelable(false)
+                            .setMessage(getString(R.string.network_failure))
+                            .setPositiveButton(context?.getString(R.string.ok_button), null)
+                            .create()
+                            .show()
                     }
                     is ContactsState.Loading -> {
-                        showProgressBar()
+                        showProgressBar(true)
                     }
                 }
-            })
-
-            getSavedContacts().observe(viewLifecycleOwner, Observer { savedContacts ->
-                if (savedContacts == null || savedContacts.isEmpty()) getUsers()
-                else userAdapter.setData(savedContacts)
             })
         }
     }
 
     private fun setupRecyclerView() {
-        userAdapter = UserListAdapter()
         recyclerView.apply {
             adapter = userAdapter
             layoutManager = LinearLayoutManager(activity)
@@ -63,18 +67,17 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts) {
 
     private fun setupRefreshListener() {
         swipeRefreshLayout.setOnRefreshListener {
-            recyclerView.visibility = View.INVISIBLE
-            viewModel.getUsers()
+            showRecyclerView(false)
+            viewModel.reloadContacts()
             swipeRefreshLayout.isRefreshing = false
         }
     }
 
-    private fun hideProgressBar() {
-        user_list_progress_bar.visibility = View.INVISIBLE
-        recyclerView.visibility = View.VISIBLE
+    private fun showRecyclerView(showRecyclerView: Boolean) {
+        recyclerView.isVisible = showRecyclerView
     }
 
-    private fun showProgressBar() {
-        user_list_progress_bar.visibility = View.VISIBLE
+    private fun showProgressBar(showProgressBar: Boolean) {
+        user_list_progress_bar.isVisible = showProgressBar
     }
 }
