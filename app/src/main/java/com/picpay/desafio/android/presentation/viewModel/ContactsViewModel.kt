@@ -16,13 +16,13 @@ class ContactsViewModel(
 ) : ViewModel() {
 
     private val _users: MutableLiveData<ContactsState<List<User>>> = MutableLiveData()
-    val users: LiveData<ContactsState<List<User>>> = _users
+    val users: LiveData<ContactsState<List<User>>> get() = _users
 
     init {
         getUsers()
     }
 
-    private fun getUsers() {
+    fun getUsers() {
         _users.postValue(ContactsState.Loading())
         viewModelScope.launch {
             withContext(Dispatchers.IO) {

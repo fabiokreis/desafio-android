@@ -1,77 +1,69 @@
 package com.picpay.desafio.android.presentation.viewmodel
 
-import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.internal.runner.junit4.AndroidJUnit4ClassRunner
-import com.picpay.desafio.android.data.ContactsRepository
-import com.picpay.desafio.android.data.database.ContactDatabase
+import androidx.lifecycle.Observer
+import com.picpay.desafio.android.domain.ContactsState
 import com.picpay.desafio.android.domain.models.User
+import com.picpay.desafio.android.domain.usecase.ContactsUseCase
 import com.picpay.desafio.android.presentation.viewModel.ContactsViewModel
-import com.picpay.desafio.android.util.getLiveDataValue
-import org.junit.*
-import org.junit.Assert.assertFalse
-import org.junit.runner.RunWith
+import com.picpay.desafio.android.util.UnitTest
+import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
+import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runBlockingTest
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TestRule
 
-@RunWith(AndroidJUnit4ClassRunner::class)
-class ContactViewModelTest{
+class ContactsViewModelTest : UnitTest() {
+    private val contactsUserCase = mockk<ContactsUseCase>(relaxed = true)
 
-    @get:Rule
-    val instantTaskExecutorRule = InstantTaskExecutorRule()
+    private val usersObserver: Observer<ContactsState<List<User>>> = mockk(relaxed = true)
 
     private lateinit var viewModel: ContactsViewModel
-    private lateinit var repository: ContactsRepository
-    private lateinit var db: ContactDatabase
 
-    @Before
-    fun setUp() {
+    @get:Rule
+    val rule: TestRule = InstantTaskExecutorRule()
 
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(context, ContactDatabase::class.java)
-            .allowMainThreadQueries().build()
-        repository = ContactsRepository(db)
-        viewModel = ContactsViewModel(repository)
+    override fun initialize() {
+        viewModel = ContactsViewModel(contactsUserCase)
     }
 
+    @ExperimentalCoroutinesApi
     @Test
-    fun should_save_and_return_saved_contacts(){
-        val user = User("", "user", 1, "")
-        viewModel.saveContacts(listOf(user))
+    fun should_getUsers_is_successful() {
+        runBlockingTest {
+            val user = User("img", "name", 1, "username")
 
-        val user1 = viewModel.getSavedContacts().getLiveDataValue().find {user ->
-            user.id == 1
-            user.img == ""
-            user.name == "user"
-            user.username == ""
+            val usersMock: ContactsState<List<User>> = ContactsState.Success(listOf(user))
+
+            val contactStateSlot = mutableListOf<ContactsState<List<User>>>()
+
+            with(viewModel) {
+                users.observeForever(usersObserver)
+            }
+
+            coEvery {
+                contactsUserCase.getContacts()
+            } returns usersMock
+
+            viewModel.getUsers()
+
+            coVerify {
+                contactsUserCase.getContacts()
+            }
+
+            verify {
+                usersObserver.onChanged(capture(contactStateSlot))
+            }
+
+            contactStateSlot shouldNotBe null
+            contactStateSlot.size shouldBe 4
+
+            confirmVerified(
+                contactsUserCase
+            )
         }
-
-        Assert.assertNotNull(user1)
-    }
-
-    @Test
-    fun should_return_null_contacts(){
-        val user1 = viewModel.getSavedContacts().getLiveDataValue().find {user ->
-            user.id == 1
-            user.img == ""
-            user.name == "user"
-            user.username == ""
-        }
-
-        Assert.assertNull(user1)
-    }
-
-    @Test
-    fun should_return_users_contacts(){
-        viewModel.getUsers()
-
-        val users = viewModel.users.getLiveDataValue().data?.size
-        assertFalse(users == 0)
-    }
-
-    @After
-    fun closeDB(){
-        db.clearAllTables()
-        db.close()
     }
 }
