@@ -5,14 +5,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.picpay.desafio.android.domain.ContactsState
+import com.picpay.desafio.android.domain.interfaces.ContactsRepository
 import com.picpay.desafio.android.domain.models.User
-import com.picpay.desafio.android.domain.usecase.ContactsUseCase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 
 class ContactsViewModel(
-    private val contactsUserCase: ContactsUseCase
+    private val contactsRepository: ContactsRepository
 ) : ViewModel() {
 
     private val _users: MutableLiveData<ContactsState<List<User>>> = MutableLiveData()
@@ -26,7 +24,14 @@ class ContactsViewModel(
         _users.postValue(ContactsState.Loading())
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                _users.postValue(contactsUserCase.getContacts())
+                _users.postValue(ContactsState.Loading())
+                try {
+                    contactsRepository.getContacts().let { users ->
+                        _users.postValue(ContactsState.Success(users))
+                    }
+                } catch (t: Throwable) {
+                    _users.postValue(ContactsState.Error(t.message))
+                }
             }
         }
     }

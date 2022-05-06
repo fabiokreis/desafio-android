@@ -14,31 +14,21 @@ class ContactsRepositoryImpl(private val db: ContactDatabase) : ContactsReposito
         db.getContactDao().upsert(users)
     }
 
-    override suspend fun getSavedContacts(): ContactsState<List<User>> {
+    override suspend fun getContacts(): List<User> {
         val savedContacts = db.getContactDao().getAllContacts()
 
-        savedContacts.run { savedContacts.isNotEmpty() }.let { isNotEmpty ->
-            if (isNotEmpty) {
-                return ContactsState.Success(savedContacts.map {
-                    it.toUser()
-                })
+        if (savedContacts.isNotEmpty()) {
+            return savedContacts.map { it.toUser() }
+        }
+
+        val response = RetrofitInstance.api.getUsers()
+        if (response.isSuccessful) {
+            response.body()?.let { resultResponse ->
+                saveContacts(resultResponse)
+                return resultResponse.map { it.toUser() }
             }
         }
 
-        try {
-            val response = RetrofitInstance.api.getUsers()
-            if (response.isSuccessful) {
-                response.body()?.let { resultResponse ->
-                    saveContacts(resultResponse)
-                    return ContactsState.Success(resultResponse.map {
-                        it.toUser()
-                    })
-                }
-            }
-        } catch (t: Throwable) {
-            return ContactsState.Error()
-        }
-
-        return ContactsState.Error()
+        return emptyList()
     }
 }

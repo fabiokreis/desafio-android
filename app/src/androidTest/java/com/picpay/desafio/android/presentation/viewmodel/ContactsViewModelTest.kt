@@ -3,8 +3,8 @@ package com.picpay.desafio.android.presentation.viewmodel
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
 import com.picpay.desafio.android.domain.ContactsState
+import com.picpay.desafio.android.domain.interfaces.ContactsRepository
 import com.picpay.desafio.android.domain.models.User
-import com.picpay.desafio.android.domain.usecase.ContactsUseCase
 import com.picpay.desafio.android.presentation.viewModel.ContactsViewModel
 import com.picpay.desafio.android.util.UnitTest
 import io.kotlintest.shouldBe
@@ -17,7 +17,7 @@ import org.junit.Test
 import org.junit.rules.TestRule
 
 class ContactsViewModelTest : UnitTest() {
-    private val contactsUserCase = mockk<ContactsUseCase>(relaxed = true)
+    private val contactsRepository = mockk<ContactsRepository>(relaxed = true)
 
     private val usersObserver: Observer<ContactsState<List<User>>> = mockk(relaxed = true)
 
@@ -27,7 +27,7 @@ class ContactsViewModelTest : UnitTest() {
     val rule: TestRule = InstantTaskExecutorRule()
 
     override fun initialize() {
-        viewModel = ContactsViewModel(contactsUserCase)
+        viewModel = ContactsViewModel(contactsRepository)
     }
 
     @ExperimentalCoroutinesApi
@@ -36,7 +36,7 @@ class ContactsViewModelTest : UnitTest() {
         runBlockingTest {
             val user = User("img", "name", 1, "username")
 
-            val usersMock: ContactsState<List<User>> = ContactsState.Success(listOf(user))
+            val usersMock = listOf(user)
 
             val contactStateSlot = mutableListOf<ContactsState<List<User>>>()
 
@@ -45,13 +45,13 @@ class ContactsViewModelTest : UnitTest() {
             }
 
             coEvery {
-                contactsUserCase.getContacts()
+                contactsRepository.getContacts()
             } returns usersMock
 
             viewModel.getUsers()
 
             coVerify {
-                contactsUserCase.getContacts()
+                contactsRepository.getContacts()
             }
 
             verify {
@@ -59,10 +59,10 @@ class ContactsViewModelTest : UnitTest() {
             }
 
             contactStateSlot shouldNotBe null
-            contactStateSlot.size shouldBe 4
+            contactStateSlot.size shouldBe 6
 
             confirmVerified(
-                contactsUserCase
+                contactsRepository
             )
         }
     }

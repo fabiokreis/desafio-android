@@ -1,6 +1,5 @@
 package com.picpay.desafio.android.data
 
-import com.picpay.desafio.android.domain.ContactsState
 import com.picpay.desafio.android.domain.models.User
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -17,16 +16,16 @@ class ContactsRepositoryTest {
         runBlocking {
             val user = User("img", "name", 1, "username")
 
-            val usersMock: ContactsState<List<User>> = ContactsState.Success(listOf(user))
+            val usersMock = listOf(user)
 
             coEvery {
-                contactsRepository.getSavedContacts()
+                contactsRepository.getContacts()
             } answers { usersMock }
 
-            val usersSaved = contactsRepository.getSavedContacts()
+            val usersSaved = contactsRepository.getContacts()
 
             coVerify(exactly = 1) {
-                contactsRepository.getSavedContacts()
+                contactsRepository.getContacts()
             }
 
             assert(usersSaved == usersMock)
